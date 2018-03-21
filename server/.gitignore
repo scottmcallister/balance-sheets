@@ -25,3 +25,9 @@ project/target
 project/plugins/target
 target
 .target
+
+# Gradle
+.gradle
+build
+server.iml
+
