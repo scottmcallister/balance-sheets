@@ -2,3 +2,4 @@ ui/scripts/* linguist-vendored
 ui/config/* linguist-vendored
 ui/src/*.js linguist-vendored
 ui/public/* linguist-vendored
+ui/src/*.css linguist-vendored
