@@ -1,5 +1,5 @@
-ui/scripts/* linguist-vendored
-ui/config/* linguist-vendored
-ui/src/*.js linguist-vendored
-ui/public/* linguist-vendored
-ui/src/*.css linguist-vendored
+client/scripts/* linguist-vendored
+client/config/* linguist-vendored
+client/src/*.js linguist-vendored
+client/public/* linguist-vendored
+client/src/*.css linguist-vendored
