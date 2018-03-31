@@ -1,62 +1,60 @@
-{-# LANGUAGE DataKinds       #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeOperators   #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module Lib
-    ( startApp
-    , app
-    ) where
+       ( startApp
+       , app
+       ) where
 
-import Data.Aeson
-import Data.Aeson.TH
-import Network.Wai
-import Network.Wai.Handler.Warp
-import Network.Wai.Middleware.Cors
-import Servant
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Logger (runStderrLoggingT)
+import           Database.Persist.Sqlite ( ConnectionPool, createSqlitePool
+                                          , runSqlPool, runSqlPersistMPool
+                                          , runMigration, selectFirst, (==.)
+                                          , insert, entityVal)
+import           Data.String.Conversions (cs)
+import           Data.Text (Text)
+import           Network.Wai.Handler.Warp as Warp
 
-data User = User
-  { userId        :: Int
-  , userFirstName :: String
-  , userLastName  :: String
-  } deriving (Eq, Show)
+import           Servant
 
-$(deriveJSON defaultOptions ''User)
+import           Api
+import           Models
 
-type API = "users" :> Get '[JSON] [User]
+server :: ConnectionPool -> Server Api
+server pool =
+  userAddH :<|> userGetH
+  where
+    userAddH newUser = liftIO $ userAdd newUser
+    userGetH name    = liftIO $ userGet name
 
-app :: Application
-app = serve api server
+    userAdd :: User -> IO (Maybe (Key User))
+    userAdd newUser = flip runSqlPersistMPool pool $ do
+      exists <- selectFirst [UserName ==. userName newUser] []
+      case exists of
+        Nothing -> Just <$> insert newUser
+        Just _ -> return Nothing
 
-api :: Proxy API
-api = Proxy
+    userGet :: Text -> IO (Maybe User)
+    userGet name = flip runSqlPersistMPool pool $ do
+      mUser <- selectFirst [UserName ==. name] []
+      return $ entityVal <$> mUser
 
-server :: Server API
-server = return users
+app :: ConnectionPool -> Application
+app pool = serve api $ server pool
 
-users :: [User]
-users = [ User 1 "Scott" "McAllister"
-        , User 2 "Kelly" "McAllister"
-        ]
+mkApp :: FilePath -> IO Application
+mkApp sqliteFile = do
+  pool <- runStderrLoggingT $ do
+    createSqlitePool (cs sqliteFile) 5
 
+  runSqlPool (runMigration migrateAll) pool
+  return $ app pool
 
-userResourcePolicy :: CorsResourcePolicy
-userResourcePolicy =
-  CorsResourcePolicy
-    { corsOrigins = Nothing
-    , corsMethods = simpleMethods
-    , corsRequestHeaders = simpleHeaders
-    , corsExposedHeaders = Nothing
-    , corsMaxAge = Nothing
-    , corsVaryOrigin = False
-    , corsRequireOrigin = False
-    , corsIgnoreFailures = False
-    }
-
-usersCors :: Middleware
-usersCors = cors $ const (Just userResourcePolicy)
-
-
-startApp :: IO ()
-startApp = do
-  putStrLn "app running on localhost:8080"
-  run 8080 $ usersCors app
+startApp :: FilePath -> IO ()
+startApp sqliteFile =
+  Warp.run 3000 =<< mkApp sqliteFile
