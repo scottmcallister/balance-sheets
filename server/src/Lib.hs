@@ -18,7 +18,9 @@ import           Database.Persist.Sqlite ( ConnectionPool, createSqlitePool
                                           , insert, entityVal)
 import           Data.String.Conversions (cs)
 import           Data.Text (Text)
+import           Network.Wai
 import           Network.Wai.Handler.Warp as Warp
+import           Network.Wai.Middleware.Cors
 
 import           Servant
 
@@ -44,6 +46,22 @@ server pool =
       mUser <- selectFirst [UserName ==. name] []
       return $ entityVal <$> mUser
 
+apiResourcePolicy :: CorsResourcePolicy
+apiResourcePolicy =
+  CorsResourcePolicy
+    { corsOrigins = Nothing
+    , corsMethods = simpleMethods
+    , corsRequestHeaders = simpleHeaders
+    , corsExposedHeaders = Nothing
+    , corsMaxAge = Nothing
+    , corsVaryOrigin = False
+    , corsRequireOrigin = False
+    , corsIgnoreFailures = False
+    }
+
+apiCors :: Middleware
+apiCors = cors $ const (Just apiResourcePolicy)
+
 app :: ConnectionPool -> Application
 app pool = serve api $ server pool
 
@@ -53,8 +71,13 @@ mkApp sqliteFile = do
     createSqlitePool (cs sqliteFile) 5
 
   runSqlPool (runMigration migrateAll) pool
-  return $ app pool
+  return 
+    $ apiCors
+    $ app pool
 
 startApp :: FilePath -> IO ()
-startApp sqliteFile =
+startApp sqliteFile = do
+  putStrLn "app running on port 3000"
+  s <- mkApp sqliteFile
   Warp.run 3000 =<< mkApp sqliteFile
+
