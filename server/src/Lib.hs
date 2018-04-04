@@ -1,6 +1,4 @@
 {-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE TypeOperators     #-}
@@ -46,6 +44,7 @@ server pool =
       mUser <- selectFirst [UserName ==. name] []
       return $ entityVal <$> mUser
 
+
 apiResourcePolicy :: CorsResourcePolicy
 apiResourcePolicy =
   CorsResourcePolicy
@@ -67,11 +66,11 @@ app pool = serve api $ server pool
 
 mkApp :: FilePath -> IO Application
 mkApp sqliteFile = do
-  pool <- runStderrLoggingT $ do
+  pool <- runStderrLoggingT $
     createSqlitePool (cs sqliteFile) 5
 
   runSqlPool (runMigration migrateAll) pool
-  return 
+  return
     $ apiCors
     $ app pool
 
@@ -80,4 +79,3 @@ startApp sqliteFile = do
   putStrLn "app running on port 3000"
   s <- mkApp sqliteFile
   Warp.run 3000 =<< mkApp sqliteFile
-
