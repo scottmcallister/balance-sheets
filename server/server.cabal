@@ -26,6 +26,8 @@ library
                      , persistent-sqlite
                      , servant
                      , servant-server
+                     , servant-auth
+                     , servant-auth-server
                      , string-conversions
                      , text
                      , transformers

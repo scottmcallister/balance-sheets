@@ -18,17 +18,25 @@ import Database.Persist.TH
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 User
   name Text
-  age  Int
+  email Text
+  password Text
   UniqueName name
   deriving Eq Read Show
 |]
 
+data Login =
+    Login
+        { name    :: Text
+        , password :: Text
+        } deriving (Eq, Read, Show)
+
 instance FromJSON User where
   parseJSON = withObject "User" $ \ v ->
     User <$> v .: "name"
-         <*> v .: "age"
+         <*> v .: "email"
+         <*> v .: "password"
 
 instance ToJSON User where
-  toJSON (User name age) =
+  toJSON (User name email password) =
     object [ "name" .= name
-           , "age" .= age ]
+           , "email" .= email ]
