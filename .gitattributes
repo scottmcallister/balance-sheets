@@ -1,5 +1,1 @@
-client/scripts/* linguist-vendored
-client/config/* linguist-vendored
-client/src/*.js linguist-vendored
-client/public/* linguist-vendored
-client/src/*.css linguist-vendored
+
